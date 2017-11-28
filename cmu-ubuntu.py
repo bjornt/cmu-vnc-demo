@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -50,17 +50,14 @@ def disconnect_vpn(vpn):
 
 def create(user):
     """Create the VM in the cloudlet and connect to it with VNC."""
-    with open('vnc-overlay.zip', 'rb') as stream:
-        files = {
-            'overlay': stream.read()
-        }
     print('Requesting VM be created in cloudlet and pushing overlay.')
     resp = requests.post(
         'http://orangebox72.elijah.cs.cmu.edu:2000/',
-        files=files,
         data={
             'user_id': user,
-            'app_id': 'vncdesktop',
+            'app_id': 'lego',
+            'overlay': 'http://172.27.72.1:5240/MAAS/images-stream/custom/'
+                       'amd64/generic/lego-overlay-zip/20171128/root-dd.raw',
         })
     if resp.status_code != 201:
         raise Exception('Failed to create VM in cloudlet: %s' % resp.text)
@@ -74,7 +71,7 @@ def destroy(user):
         'http://orangebox72.elijah.cs.cmu.edu:2000/',
         params={
             'user_id': user,
-            'app_id': 'vncdesktop',
+            'app_id': 'lego',
         })
     print('VM destroyed in cloudlet.')
 
@@ -133,13 +130,8 @@ def main():
         resp = create(args.user)
         try:
             vpn = connect_vpn(resp['vpn'])
-            try:
-                vnc = spawn_vnc_server(resp['ip'])
-                print('Spawning the VNC client.')
-                subprocess.check_output(['gvncviewer', 'localhost'])
-            finally:
-                if vnc:
-                    destroy_vnc_server(vnc)
+            print("VM is at " + resp['ip'])
+            input("Press Enter to destroy the VM:")
         finally:
             if vpn:
                 disconnect_vpn(vpn)
